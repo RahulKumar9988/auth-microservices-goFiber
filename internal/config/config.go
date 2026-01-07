@@ -15,9 +15,16 @@ type DBConfig struct {
 	ConnectTimeout time.Duration
 }
 
+type RedisConfig struct {
+	Addr     string
+	Password string
+	DB       int
+}
+
 type Config struct {
-	AppPort string
-	DB      DBConfig
+	AppPort  string
+	DB       DBConfig
+	RedisURL RedisConfig
 }
 
 func Load() *Config {
@@ -30,6 +37,10 @@ func Load() *Config {
 	cfg.DB.MaxIdleConns = getEnvInt("DB_MAX_IDLE", 10)
 	cfg.DB.ConnMaxLife = time.Minute * 30
 	cfg.DB.ConnectTimeout = time.Second * 5
+
+	cfg.RedisURL.Addr = mustGetEnv("REDIS_ADDR")
+	cfg.RedisURL.Password = getEnv("REDIS_PASSWORD", "")
+	cfg.RedisURL.DB = getEnvInt("REDIS_DB", 0)
 
 	return cfg
 }

@@ -5,26 +5,25 @@ import (
 	"gorm.io/gorm"
 )
 
-type UserRepositories struct {
+type UserRepository struct {
 	db *gorm.DB
 }
 
-func NewUserRepositories(db *gorm.DB) *UserRepositories {
-	return &UserRepositories{db: db}
+func NewUserRepository(db *gorm.DB) *UserRepository {
+	return &UserRepository{db: db}
 }
 
-func (r *UserRepositories) Create(user *models.UserModel) error {
+func (r *UserRepository) Create(user *models.UserModel) error {
 	return r.db.Create(user).Error
 }
 
-func (r *UserRepositories) FindByEmail(email string) (*models.UserModel, error) {
+func (r *UserRepository) FindByEmail(email string) (*models.UserModel, error) {
 	var user models.UserModel
-	err := r.db.Where("email = ?", user.Email).Find(&user).Error
-	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return nil, nil
-		}
-		return nil, err
+
+	err := r.db.Where("email = ?", email).First(&user).Error
+
+	if err == gorm.ErrRecordNotFound {
+		return nil, nil
 	}
 	return &user, nil
 }
