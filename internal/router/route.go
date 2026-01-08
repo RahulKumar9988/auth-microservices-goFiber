@@ -1,6 +1,9 @@
 package router
 
 import (
+	"github.com/RahulKumar9988/auth-microservices-goFiber/internal/handler"
+	"github.com/RahulKumar9988/auth-microservices-goFiber/internal/repositories"
+	"github.com/RahulKumar9988/auth-microservices-goFiber/internal/services"
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/gorm"
 )
@@ -17,4 +20,10 @@ func Register(app *fiber.App, db *gorm.DB) {
 			"status": "ok",
 		})
 	})
+
+	userRepo := repositories.NewUserRepository(db)
+	userService := services.NewAuthService(userRepo)
+	authHandler := handler.NewAuthHandler(userService)
+
+	app.Post("/auth/register", authHandler.Register)	
 }
