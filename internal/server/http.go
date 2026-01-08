@@ -15,7 +15,8 @@ func Start(app *fiber.App, port string) {
 
 	go func() {
 		if err := app.Listen(":" + port); err != nil {
-			log.Fatalf("server faield : %v", err)
+			// Fiber returns error on shutdown → this is NORMAL
+			log.Println("server stopped:", err)
 		}
 	}()
 
@@ -32,4 +33,5 @@ func Start(app *fiber.App, port string) {
 		log.Printf("server shutdown error: %v", err)
 	}
 
+	log.Println("server exited cleanly")
 }

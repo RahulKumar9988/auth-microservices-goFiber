@@ -1,7 +1,10 @@
+version: '3.9'
+
 services:
   postgres:
     image: postgres:16
     container_name: auth-postgres
+    user: "postgres:postgres"
     environment:
       POSTGRES_USER: auth
       POSTGRES_PASSWORD: auth
@@ -15,28 +18,50 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - auth-network
 
   redis:
     image: redis:7
     container_name: auth-redis
+    user: "redis:redis"
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - auth-network
 
   auth:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: auth-service
     depends_on:
       postgres:
         condition: service_healthy
       redis:
-        condition: service_started
+        condition: service_healthy
     environment:
+      APP_PORT: 8080
       DB_URL: postgres://auth:auth@postgres:5432/authdb?sslmode=disable
       REDIS_ADDR: redis:6379
       REDIS_PASSWORD:
       REDIS_DB: 0
     ports:
       - "8080:8080"
+    stop_grace_period: 10s
+    restart: unless-stopped
+    networks:
+      - auth-network
 
 volumes:
   pgdata:
+    driver: local
+
+networks:
+  auth-network:
+    driver: bridge

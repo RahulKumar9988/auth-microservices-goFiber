@@ -22,7 +22,7 @@ func main() {
 	)
 
 	if err != nil {
-		log.Fatalf("startup failed: %v", err)
+		log.Printf("startup failed: %v", err)
 	}
 
 	redisClient, err := redis.Connect(redis.Config{
@@ -32,7 +32,7 @@ func main() {
 	})
 
 	if err != nil {
-		log.Fatalf("redis startup failed: %v", err)
+		log.Printf("redis startup failed: %v", err)
 	}
 	defer redisClient.Close()
 

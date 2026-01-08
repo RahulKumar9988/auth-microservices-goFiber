@@ -9,7 +9,16 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o app ./cmd/main.go
 
 FROM alpine:latest
+
+# ✅ Required for production
+RUN apk add --no-cache tini
+
 WORKDIR /app
 COPY --from=builder /app/app .
-EXPOSE 3000
+
+EXPOSE 8080
+
+STOPSIGNAL SIGTERM
+
+ENTRYPOINT ["/sbin/tini", "--"]
 CMD ["./app"]

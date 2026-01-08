@@ -1,0 +1,35 @@
+.PHONY: help docker-up docker-down docker-logs docker-clean docker-restart docker-build
+
+# Default help target
+help:
+	@echo "Available docker commands:"
+	@echo "  make docker-up       - Start all containers"
+	@echo "  make docker-down     - Stop all containers"
+	@echo "  make docker-logs     - View container logs"
+	@echo "  make docker-restart  - Restart all containers"
+	@echo "  make docker-clean    - Remove all containers and volumes (CAUTION!)"
+	@echo "  make docker-build    - Build images without starting"
+
+docker-up:
+	docker-compose up -d
+	@echo "✓ All services started"
+
+docker-down:
+	docker-compose down
+	@echo "✓ All services stopped"
+
+docker-logs:
+	docker-compose logs -f
+
+docker-restart:
+	docker-compose restart
+	@echo "✓ All services restarted"
+
+docker-clean:
+	@echo "Warning: This will remove all containers and volumes"
+	docker-compose down -v
+	@echo "✓ All containers and volumes removed"
+
+docker-build:
+	docker-compose build
+	@echo "✓ Images built successfully"

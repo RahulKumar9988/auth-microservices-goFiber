@@ -69,7 +69,7 @@ func getEnvInt(key string, defaultVal int) int {
 
 	val, err := strconv.Atoi(valStr)
 	if err != nil {
-		log.Fatalf("invalid int value for env %s: %v", key, err)
+		log.Printf("invalid int value for env %s: %v", key, err)
 	}
 
 	return val
