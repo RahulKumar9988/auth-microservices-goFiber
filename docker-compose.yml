@@ -38,17 +38,19 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: auth-service
+    env_file:
+      - .env
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
     environment:
-      APP_PORT: 8080
-      DB_URL: postgres://auth:auth@postgres:5432/authdb?sslmode=disable
-      REDIS_ADDR: redis:6379
-      REDIS_PASSWORD:
-      REDIS_DB: 0
+      APP_PORT: ${APP_PORT}
+      DB_URL: ${DB_URL}
+      REDIS_ADDR: ${REDIS_ADDR}
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      REDIS_DB: ${REDIS_DB}
     ports:
       - "8080:8080"
     stop_grace_period: 10s

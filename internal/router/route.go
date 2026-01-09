@@ -1,6 +1,7 @@
 package router
 
 import (
+	"github.com/RahulKumar9988/auth-microservices-goFiber/internal/config"
 	"github.com/RahulKumar9988/auth-microservices-goFiber/internal/handler"
 	"github.com/RahulKumar9988/auth-microservices-goFiber/internal/repositories"
 	"github.com/RahulKumar9988/auth-microservices-goFiber/internal/services"
@@ -8,7 +9,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func Register(app *fiber.App, db *gorm.DB) {
+func Register(app *fiber.App, db *gorm.DB, jwtCfg config.JWTConfig) {
 	app.Get("/health", func(c *fiber.Ctx) error {
 		sqlDB, _ := db.DB()
 		if err := sqlDB.Ping(); err != nil {
@@ -22,7 +23,7 @@ func Register(app *fiber.App, db *gorm.DB) {
 	})
 
 	userRepo := repositories.NewUserRepository(db)
-	userService := services.NewAuthService(userRepo)
+	userService := services.NewAuthService(userRepo, jwtCfg)
 	authHandler := handler.NewAuthHandler(userService)
 
 	app.Post("/auth/register", authHandler.Register)

@@ -59,7 +59,9 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 		})
 	}
 
-	user, err := h.authService.Login(req.Email, req.Password)
+	// user, err := h.authService.Login(req.Email, req.Password)
+
+	tokens, err := h.authService.Login(req.Email, req.Password)
 
 	if err != nil {
 		switch {
@@ -73,9 +75,10 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 	}
 
 	return c.Status(200).JSON(fiber.Map{
-		"userId": user.ID,
-		"email":  user.Email,
-		"role":   user.Role,
+		"accessToken":  tokens.AccessToken,
+		"refreshToken": tokens.RefreshToken,
+		"tokenType":    "Bearer",
+		"expiresIn":    tokens.ExpiresIn,
 	})
 }
 

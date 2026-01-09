@@ -40,7 +40,7 @@ func main() {
 		AppName: "auth-service",
 	})
 
-	router.Register(app, dbConn)
+	router.Register(app, dbConn, cfg.JWT)
 	server.Start(app, cfg.AppPort)
 
 }
