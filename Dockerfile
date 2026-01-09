@@ -21,10 +21,3 @@ EXPOSE 8080
 # Use dumb-init as PID1 to handle signals properly
 ENTRYPOINT ["/usr/bin/dumb-init", "--"]
 CMD ["./app"]
-
-EXPOSE 8080
-
-STOPSIGNAL SIGTERM
-
-ENTRYPOINT ["/sbin/tini", "--"]
-CMD ["./app"]
