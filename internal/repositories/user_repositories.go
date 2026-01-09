@@ -33,3 +33,12 @@ func (r *UserRepository) FindByEmail(email string) (*models.UserModel, error) {
 
 	return &user, nil
 }
+
+func (r *UserRepository) GetAllUsers() ([]models.UserModel, error) {
+	var users []models.UserModel
+	err := r.db.Find(&users).Error
+	if err != nil {
+		return nil, err
+	}
+	return users, nil
+}

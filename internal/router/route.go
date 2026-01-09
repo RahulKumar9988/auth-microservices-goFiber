@@ -27,4 +27,6 @@ func Register(app *fiber.App, db *gorm.DB) {
 
 	app.Post("/auth/register", authHandler.Register)
 	app.Post("/auth/login", authHandler.Login)
+	app.Get("/auth/userlist", authHandler.UserList)
+
 }

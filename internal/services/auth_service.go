@@ -75,3 +75,7 @@ func (s *AuthService) Login(email string, password string) (*models.UserModel, e
 
 	return user, nil
 }
+
+func (s *AuthService) GetAllUsers() ([]models.UserModel, error) {
+	return s.userRepo.GetAllUsers()
+}

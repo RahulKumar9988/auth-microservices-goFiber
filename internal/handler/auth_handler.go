@@ -78,3 +78,14 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 		"role":   user.Role,
 	})
 }
+
+func (h *AuthHandler) UserList(c *fiber.Ctx) error {
+	users, err := h.authService.GetAllUsers()
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "failed to retrieve users"})
+	}
+
+	return c.JSON(fiber.Map{
+		"users": users,
+	})
+}
