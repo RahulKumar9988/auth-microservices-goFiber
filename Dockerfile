@@ -15,6 +15,7 @@ RUN apk add --no-cache dumb-init
 
 WORKDIR /app
 COPY --from=builder /app/app .
+COPY migrations ./migrations
 
 EXPOSE 8080
 

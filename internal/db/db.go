@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"log"
+	"os"
+	"path/filepath"
 	"time"
 
 	"gorm.io/driver/postgres"
@@ -65,9 +67,51 @@ func Connect(
 		sqlDB.SetMaxOpenConns(maxOpen)
 		sqlDB.SetConnMaxLifetime(maxLife)
 
+		// Run migrations
+		if err := runMigrations(db); err != nil {
+			log.Printf("migration failed: %v", err)
+			return nil, err
+		}
+
 		log.Println("DB Connected sucessfully")
 		return db, nil
 	}
 
 	return nil, errors.New("database unreachable after retries: " + lastErr.Error())
+}
+
+// runMigrations executes all SQL migration files
+func runMigrations(db *gorm.DB) error {
+	migrationsPath := "migrations"
+
+	// Read migrations directory
+	files, err := os.ReadDir(migrationsPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			log.Println("migrations directory not found, skipping migrations")
+			return nil
+		}
+		return err
+	}
+
+	// Execute migration files in order
+	for _, file := range files {
+		if file.IsDir() || filepath.Ext(file.Name()) != ".sql" {
+			continue
+		}
+
+		filePath := filepath.Join(migrationsPath, file.Name())
+		sqlBytes, err := os.ReadFile(filePath)
+		if err != nil {
+			return err
+		}
+
+		log.Printf("Running migration: %s", file.Name())
+		if err := db.Exec(string(sqlBytes)).Error; err != nil {
+			return err
+		}
+		log.Printf("Migration %s completed", file.Name())
+	}
+
+	return nil
 }
