@@ -1,6 +1,8 @@
 package repositories
 
 import (
+	"errors"
+
 	"github.com/RahulKumar9988/auth-microservices-goFiber/internal/models"
 	"gorm.io/gorm"
 )
@@ -22,8 +24,12 @@ func (r *UserRepository) FindByEmail(email string) (*models.UserModel, error) {
 
 	err := r.db.Where("email = ?", email).First(&user).Error
 
-	if err == gorm.ErrRecordNotFound {
-		return nil, nil
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
 	}
+
 	return &user, nil
 }
