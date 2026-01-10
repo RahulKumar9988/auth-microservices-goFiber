@@ -6,6 +6,7 @@ import (
 	"github.com/RahulKumar9988/auth-microservices-goFiber/internal/config"
 	"github.com/RahulKumar9988/auth-microservices-goFiber/internal/db"
 	"github.com/RahulKumar9988/auth-microservices-goFiber/internal/redis"
+	"github.com/RahulKumar9988/auth-microservices-goFiber/internal/repositories"
 	"github.com/RahulKumar9988/auth-microservices-goFiber/internal/router"
 	"github.com/RahulKumar9988/auth-microservices-goFiber/internal/server"
 	"github.com/gofiber/fiber/v2"
@@ -40,7 +41,9 @@ func main() {
 		AppName: "auth-service",
 	})
 
-	router.Register(app, dbConn, cfg.JWT)
+	tokenRepo := repositories.NewRefreshTokenRepository(redisClient)
+
+	router.Register(app, dbConn, cfg.JWT, tokenRepo)
 	server.Start(app, cfg.AppPort)
 
 }

@@ -59,8 +59,6 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 		})
 	}
 
-	// user, err := h.authService.Login(req.Email, req.Password)
-
 	tokens, err := h.authService.Login(req.Email, req.Password)
 
 	if err != nil {
@@ -80,6 +78,28 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 		"tokenType":    "Bearer",
 		"expiresIn":    tokens.ExpiresIn,
 	})
+}
+
+func (h *AuthHandler) Refresh(c *fiber.Ctx) error {
+
+	var req struct {
+		RefreshToken string `json:"refresh_token"`
+	}
+
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "invalid request"})
+	}
+
+	tokens, err := h.authService.Refresh(req.RefreshToken)
+	if err != nil {
+		return c.Status(401).JSON(fiber.Map{"error": "invalid refresh token"})
+	}
+
+	return c.JSON(fiber.Map{
+		"access_token":  tokens.AccessToken,
+		"refresh_token": tokens.RefreshToken,
+	})
+
 }
 
 func (h *AuthHandler) UserList(c *fiber.Ctx) error {

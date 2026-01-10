@@ -1,8 +1,10 @@
 package services
 
 import (
+	"context"
 	"errors"
 	"strings"
+	"time"
 
 	"github.com/RahulKumar9988/auth-microservices-goFiber/internal/config"
 	"github.com/RahulKumar9988/auth-microservices-goFiber/internal/middlewares/security"
@@ -25,14 +27,16 @@ type TokenPair struct {
 }
 
 type AuthService struct {
-	userRepo *repositories.UserRepository
-	jwtCfg   config.JWTConfig
+	userRepo  *repositories.UserRepository
+	jwtCfg    config.JWTConfig
+	tokenRepo *repositories.RefreshTokenRepository
 }
 
-func NewAuthService(repo *repositories.UserRepository, jwtCfg config.JWTConfig) *AuthService {
+func NewAuthService(repo *repositories.UserRepository, jwtCfg config.JWTConfig, tokenRepo *repositories.RefreshTokenRepository) *AuthService {
 	return &AuthService{
-		userRepo: repo,
-		jwtCfg:   jwtCfg,
+		userRepo:  repo,
+		jwtCfg:    jwtCfg,
+		tokenRepo: tokenRepo,
 	}
 }
 
@@ -110,6 +114,18 @@ func (s *AuthService) Login(email string, password string) (*TokenPair, error) {
 		return nil, err
 	}
 
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	if err := s.tokenRepo.Store(
+		ctx,
+		refreshToken,
+		user.ID,
+		s.jwtCfg.RefreshTTL,
+	); err != nil {
+		return nil, err
+	}
+
 	return &TokenPair{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
@@ -119,4 +135,53 @@ func (s *AuthService) Login(email string, password string) (*TokenPair, error) {
 
 func (s *AuthService) GetAllUsers() ([]models.UserModel, error) {
 	return s.userRepo.GetAllUsers()
+}
+
+func (s *AuthService) Refresh(refreshToken string) (*TokenPair, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	// Check Redis
+	userID, err := s.tokenRepo.Get(ctx, refreshToken)
+	if err != nil {
+		return nil, ErrInvalidCredentials
+	}
+
+	// Invalidate old token (ROTATION)
+	_ = s.tokenRepo.Delete(ctx, refreshToken)
+
+	// Generate new tokens
+	accessToken, err := security.GenerateAccessToken(
+		userID,
+		"", "", // email & role optional here (can fetch if needed)
+		s.jwtCfg.AccessSecret,
+		s.jwtCfg.AccessTTL,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	newRefreshToken, err := security.GenerateRefreshToken(
+		userID,
+		s.jwtCfg.RefreshSecret,
+		s.jwtCfg.RefreshTTL,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	// Store new refresh token
+	if err := s.tokenRepo.Store(
+		ctx,
+		newRefreshToken,
+		userID,
+		s.jwtCfg.RefreshTTL,
+	); err != nil {
+		return nil, err
+	}
+
+	return &TokenPair{
+		AccessToken:  accessToken,
+		RefreshToken: newRefreshToken,
+	}, nil
 }

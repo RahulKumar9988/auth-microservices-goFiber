@@ -9,7 +9,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func Register(app *fiber.App, db *gorm.DB, jwtCfg config.JWTConfig) {
+func Register(app *fiber.App, db *gorm.DB, jwtCfg config.JWTConfig, tokenRepo *repositories.RefreshTokenRepository) {
 	app.Get("/health", func(c *fiber.Ctx) error {
 		sqlDB, _ := db.DB()
 		if err := sqlDB.Ping(); err != nil {
@@ -23,11 +23,12 @@ func Register(app *fiber.App, db *gorm.DB, jwtCfg config.JWTConfig) {
 	})
 
 	userRepo := repositories.NewUserRepository(db)
-	userService := services.NewAuthService(userRepo, jwtCfg)
+	userService := services.NewAuthService(userRepo, jwtCfg, tokenRepo)
 	authHandler := handler.NewAuthHandler(userService)
 
 	app.Post("/auth/register", authHandler.Register)
 	app.Post("/auth/login", authHandler.Login)
+	app.Post("/auth/refresh", authHandler.Refresh)
 	app.Get("/auth/userlist", authHandler.UserList)
 
 }
