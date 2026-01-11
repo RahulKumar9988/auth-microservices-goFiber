@@ -3,6 +3,7 @@ package router
 import (
 	"github.com/RahulKumar9988/auth-microservices-goFiber/internal/config"
 	"github.com/RahulKumar9988/auth-microservices-goFiber/internal/handler"
+	"github.com/RahulKumar9988/auth-microservices-goFiber/internal/middlewares/security"
 	"github.com/RahulKumar9988/auth-microservices-goFiber/internal/repositories"
 	"github.com/RahulKumar9988/auth-microservices-goFiber/internal/services"
 	"github.com/gofiber/fiber/v2"
@@ -26,9 +27,13 @@ func Register(app *fiber.App, db *gorm.DB, jwtCfg config.JWTConfig, tokenRepo *r
 	userService := services.NewAuthService(userRepo, jwtCfg, tokenRepo)
 	authHandler := handler.NewAuthHandler(userService)
 
-	app.Post("/auth/register", authHandler.Register)
-	app.Post("/auth/login", authHandler.Login)
-	app.Post("/auth/refresh", authHandler.Refresh)
-	app.Get("/auth/userlist", authHandler.UserList)
+	auth := app.Group("/auth")
+
+	auth.Post("/register", authHandler.Register)
+	auth.Post("/login", authHandler.Login)
+	auth.Post("/refresh", authHandler.Refresh)
+
+	protected := auth.Group("/", security.JWT(jwtCfg.AccessSecret))
+	protected.Get("/userlist", authHandler.UserList)
 
 }

@@ -24,7 +24,7 @@ func Connect(
 	backoff := time.Second
 
 	// retry for 5 times
-	for i := 0; i < 5; i++ {
+	for i := 1; i <= 10; i++ {
 
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		// try to open DB
@@ -68,8 +68,7 @@ func Connect(
 		sqlDB.SetConnMaxLifetime(maxLife)
 
 		// Run migrations
-		if err := runMigrations(db); err != nil {
-			log.Printf("migration failed: %v", err)
+		if err := runMigrations(db.WithContext(context.Background())); err != nil {
 			return nil, err
 		}
 

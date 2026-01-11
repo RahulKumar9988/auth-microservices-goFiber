@@ -103,12 +103,16 @@ func (h *AuthHandler) Refresh(c *fiber.Ctx) error {
 }
 
 func (h *AuthHandler) UserList(c *fiber.Ctx) error {
-	users, err := h.authService.GetAllUsers()
-	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "failed to retrieve users"})
-	}
+	userID := c.Locals("user_id").(uint)
+	email := c.Locals("email").(string)
+	role := c.Locals("role").(string)
 
 	return c.JSON(fiber.Map{
-		"users": users,
+		"requested_by": fiber.Map{
+			"user_id": userID,
+			"email":   email,
+			"role":    role,
+		},
+		"users": "list here",
 	})
 }
