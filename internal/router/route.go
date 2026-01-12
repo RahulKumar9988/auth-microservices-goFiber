@@ -32,6 +32,7 @@ func Register(app *fiber.App, db *gorm.DB, jwtCfg config.JWTConfig, tokenRepo *r
 	auth.Post("/register", authHandler.Register)
 	auth.Post("/login", authHandler.Login)
 	auth.Post("/refresh", authHandler.Refresh)
+	auth.Post("/logout", authHandler.Logout)
 
 	protected := auth.Group("/", security.JWT(jwtCfg.AccessSecret))
 	protected.Get("/userlist", authHandler.UserList)

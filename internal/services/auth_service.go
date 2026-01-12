@@ -185,3 +185,9 @@ func (s *AuthService) Refresh(refreshToken string) (*TokenPair, error) {
 		RefreshToken: newRefreshToken,
 	}, nil
 }
+
+func (s *AuthService) Logout(refeshToken string) error {
+	ctx := context.Background()
+
+	return s.tokenRepo.Delete(ctx, refeshToken)
+}

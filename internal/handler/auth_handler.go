@@ -116,3 +116,26 @@ func (h *AuthHandler) UserList(c *fiber.Ctx) error {
 		"users": "list here",
 	})
 }
+
+func (h *AuthHandler) Logout(c *fiber.Ctx) error {
+	var req struct {
+		RefreshToken string `json:"refresh_token"`
+	}
+
+	if err := c.BodyParser(&req); err != nil || req.RefreshToken == "" {
+		return c.Status(400).JSON(fiber.Map{
+			"error": "refresh token missing",
+		})
+	}
+
+	if err := h.authService.Logout(req.RefreshToken); err != nil {
+		return c.Status(401).JSON(fiber.Map{
+			"error": "invalid refresh token",
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "user Loged out successfully",
+	})
+
+}
