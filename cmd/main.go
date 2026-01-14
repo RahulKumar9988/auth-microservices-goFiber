@@ -5,6 +5,7 @@ import (
 
 	"github.com/RahulKumar9988/auth-microservices-goFiber/internal/config"
 	"github.com/RahulKumar9988/auth-microservices-goFiber/internal/db"
+	"github.com/RahulKumar9988/auth-microservices-goFiber/internal/middlewares/security"
 	"github.com/RahulKumar9988/auth-microservices-goFiber/internal/redis"
 	"github.com/RahulKumar9988/auth-microservices-goFiber/internal/repositories"
 	"github.com/RahulKumar9988/auth-microservices-goFiber/internal/router"
@@ -42,8 +43,9 @@ func main() {
 	})
 
 	tokenRepo := repositories.NewRefreshTokenRepository(redisClient)
+	rateLimiter := security.NewRateLimiter(redisClient)
 
-	router.Register(app, dbConn, cfg.JWT, tokenRepo)
+	router.Register(app, dbConn, cfg.JWT, tokenRepo, rateLimiter)
 	server.Start(app, cfg.AppPort)
 
 }

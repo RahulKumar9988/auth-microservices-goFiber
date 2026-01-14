@@ -24,6 +24,7 @@ type TokenPair struct {
 	AccessToken  string
 	RefreshToken string
 	ExpiresIn    int64
+	RefreshTTL   time.Duration
 }
 
 type AuthService struct {
@@ -130,11 +131,16 @@ func (s *AuthService) Login(email string, password string) (*TokenPair, error) {
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 		ExpiresIn:    int64(s.jwtCfg.AccessTTL.Seconds()),
+		RefreshTTL:   s.jwtCfg.RefreshTTL,
 	}, nil
 }
 
 func (s *AuthService) GetAllUsers() ([]models.UserModel, error) {
 	return s.userRepo.GetAllUsers()
+}
+
+func (s *AuthService) GetAllAdmins() ([]models.UserModel, error) {
+	return s.userRepo.GetAllAdmins()
 }
 
 func (s *AuthService) Refresh(refreshToken string) (*TokenPair, error) {

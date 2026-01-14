@@ -72,67 +72,105 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 		}
 	}
 
+	c.Cookie(&fiber.Cookie{
+		Name:     "refresh_token",
+		Value:    tokens.RefreshToken,
+		HTTPOnly: false,
+		Secure:   true,
+		SameSite: fiber.CookieSameSiteLaxMode,
+		Path:     "/auth",
+		MaxAge:   int(tokens.RefreshTTL.Seconds()),
+	})
+
+	csrfToken, _ := services.GenerateCSRFToken()
+	c.Cookie(&fiber.Cookie{
+		Name:     "csrf_token",
+		Value:    csrfToken,
+		HTTPOnly: false,
+		Secure:   true,
+		SameSite: fiber.CookieSameSiteStrictMode,
+		Path:     "/",
+		MaxAge:   int(tokens.RefreshTTL.Seconds()),
+	})
+
 	return c.Status(200).JSON(fiber.Map{
-		"accessToken":  tokens.AccessToken,
-		"refreshToken": tokens.RefreshToken,
-		"tokenType":    "Bearer",
-		"expiresIn":    tokens.ExpiresIn,
+		"accessToken": tokens.AccessToken,
+		"csrfToken":   csrfToken,
+		"tokenType":   "Bearer",
+		"expiresIn":   tokens.ExpiresIn,
 	})
 }
 
 func (h *AuthHandler) Refresh(c *fiber.Ctx) error {
+	refreshToken := c.Cookies("refresh_token")
 
-	var req struct {
-		RefreshToken string `json:"refresh_token"`
+	if refreshToken == "" {
+		return c.Status(401).JSON(fiber.Map{"error": "refresh token missing"})
 	}
 
-	if err := c.BodyParser(&req); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "invalid request"})
-	}
-
-	tokens, err := h.authService.Refresh(req.RefreshToken)
+	tokens, err := h.authService.Refresh(refreshToken)
 	if err != nil {
 		return c.Status(401).JSON(fiber.Map{"error": "invalid refresh token"})
 	}
 
+	c.Cookie(&fiber.Cookie{
+		Name:     "refresh_token",
+		Value:    tokens.RefreshToken,
+		HTTPOnly: true,
+		Secure:   true,
+		SameSite: fiber.CookieSameSiteStrictMode,
+		Path:     "/auth",
+		MaxAge:   int(tokens.RefreshTTL.Seconds()),
+	})
+
 	return c.JSON(fiber.Map{
-		"access_token":  tokens.AccessToken,
-		"refresh_token": tokens.RefreshToken,
+		"access_token": tokens.AccessToken,
+		// "refresh_token": tokens.RefreshToken,
+		"expires_in": tokens.ExpiresIn,
 	})
 
 }
 
 func (h *AuthHandler) UserList(c *fiber.Ctx) error {
-	userID := c.Locals("user_id").(uint)
-	email := c.Locals("email").(string)
-	role := c.Locals("role").(string)
+	users, err := h.authService.GetAllUsers()
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "failed to fetch admin users",
+		})
+	}
 
 	return c.JSON(fiber.Map{
-		"requested_by": fiber.Map{
-			"user_id": userID,
-			"email":   email,
-			"role":    role,
-		},
-		"users": "list here",
+		"admin_lists": users,
+	})
+}
+
+func (h *AuthHandler) AdminUserList(c *fiber.Ctx) error {
+	admins, err := h.authService.GetAllAdmins()
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "failed to fetch admin users",
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"admin_lists": admins,
 	})
 }
 
 func (h *AuthHandler) Logout(c *fiber.Ctx) error {
-	var req struct {
-		RefreshToken string `json:"refresh_token"`
-	}
 
-	if err := c.BodyParser(&req); err != nil || req.RefreshToken == "" {
+	refreshToken := c.Cookies("refresh_token")
+
+	if refreshToken == "" {
 		return c.Status(400).JSON(fiber.Map{
 			"error": "refresh token missing",
 		})
 	}
 
-	if err := h.authService.Logout(req.RefreshToken); err != nil {
-		return c.Status(401).JSON(fiber.Map{
-			"error": "invalid refresh token",
-		})
-	}
+	_ = h.authService.Logout(refreshToken)
+
+	c.ClearCookie("refresh_token")
+	c.ClearCookie("csrf_tokrn")
 
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "user Loged out successfully",

@@ -42,3 +42,14 @@ func (r *UserRepository) GetAllUsers() ([]models.UserModel, error) {
 	}
 	return users, nil
 }
+
+func (r *UserRepository) GetAllAdmins() ([]models.UserModel, error) {
+	var admins []models.UserModel
+	err := r.db.
+		Where("role = ?", "admin").
+		Find(&admins).Error
+	if err != nil {
+		return nil, err
+	}
+	return admins, nil
+}

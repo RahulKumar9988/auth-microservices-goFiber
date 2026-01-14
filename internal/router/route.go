@@ -1,6 +1,8 @@
 package router
 
 import (
+	"time"
+
 	"github.com/RahulKumar9988/auth-microservices-goFiber/internal/config"
 	"github.com/RahulKumar9988/auth-microservices-goFiber/internal/handler"
 	"github.com/RahulKumar9988/auth-microservices-goFiber/internal/middlewares/security"
@@ -10,7 +12,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func Register(app *fiber.App, db *gorm.DB, jwtCfg config.JWTConfig, tokenRepo *repositories.RefreshTokenRepository) {
+func Register(app *fiber.App, db *gorm.DB, jwtCfg config.JWTConfig, tokenRepo *repositories.RefreshTokenRepository, rateLimiter *security.Ratelimiter) {
 	app.Get("/health", func(c *fiber.Ctx) error {
 		sqlDB, _ := db.DB()
 		if err := sqlDB.Ping(); err != nil {
@@ -29,12 +31,15 @@ func Register(app *fiber.App, db *gorm.DB, jwtCfg config.JWTConfig, tokenRepo *r
 
 	auth := app.Group("/auth")
 
-	auth.Post("/register", authHandler.Register)
-	auth.Post("/login", authHandler.Login)
-	auth.Post("/refresh", authHandler.Refresh)
+	auth.Post("/register", rateLimiter.Limit("register", 5, time.Minute), authHandler.Register)
+	auth.Post("/login", rateLimiter.Limit("register", 5, time.Minute), authHandler.Login)
+	auth.Post("/refresh", rateLimiter.Limit("register", 5, time.Minute), authHandler.Refresh)
 	auth.Post("/logout", authHandler.Logout)
 
 	protected := auth.Group("/", security.JWT(jwtCfg.AccessSecret))
 	protected.Get("/userlist", authHandler.UserList)
+
+	admin := protected.Group("/admin", security.RequiredRole("admin"))
+	admin.Get("/adminlist", authHandler.AdminUserList)
 
 }
