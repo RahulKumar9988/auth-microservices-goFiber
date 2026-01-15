@@ -75,7 +75,7 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 	c.Cookie(&fiber.Cookie{
 		Name:     "refresh_token",
 		Value:    tokens.RefreshToken,
-		HTTPOnly: false,
+		HTTPOnly: true,
 		Secure:   true,
 		SameSite: fiber.CookieSameSiteLaxMode,
 		Path:     "/auth",
