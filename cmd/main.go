@@ -42,10 +42,10 @@ func main() {
 		AppName: "auth-service",
 	})
 
-	tokenRepo := repositories.NewRefreshTokenRepository(redisClient)
+	sessionRepo := repositories.NewSessionRepository(redisClient)
 	rateLimiter := security.NewRateLimiter(redisClient)
 
-	router.Register(app, dbConn, cfg.JWT, tokenRepo, rateLimiter)
+	router.Register(app, dbConn, cfg.JWT, sessionRepo, rateLimiter)
 	server.Start(app, cfg.AppPort)
 
 }

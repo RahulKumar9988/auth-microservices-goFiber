@@ -10,6 +10,7 @@ import (
 	"github.com/RahulKumar9988/auth-microservices-goFiber/internal/middlewares/security"
 	"github.com/RahulKumar9988/auth-microservices-goFiber/internal/models"
 	"github.com/RahulKumar9988/auth-microservices-goFiber/internal/repositories"
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -28,16 +29,17 @@ type TokenPair struct {
 }
 
 type AuthService struct {
-	userRepo  *repositories.UserRepository
-	jwtCfg    config.JWTConfig
-	tokenRepo *repositories.RefreshTokenRepository
+	userRepo *repositories.UserRepository
+	jwtCfg   config.JWTConfig
+	//tokenRepo *repositories.RefreshTokenRepository
+	sessionRepo *repositories.SessionRepository
 }
 
-func NewAuthService(repo *repositories.UserRepository, jwtCfg config.JWTConfig, tokenRepo *repositories.RefreshTokenRepository) *AuthService {
+func NewAuthService(repo *repositories.UserRepository, jwtCfg config.JWTConfig, sessionRepo *repositories.SessionRepository) *AuthService {
 	return &AuthService{
-		userRepo:  repo,
-		jwtCfg:    jwtCfg,
-		tokenRepo: tokenRepo,
+		userRepo:    repo,
+		jwtCfg:      jwtCfg,
+		sessionRepo: sessionRepo,
 	}
 }
 
@@ -105,8 +107,11 @@ func (s *AuthService) Login(email string, password string) (*TokenPair, error) {
 		return nil, err
 	}
 
+	sessionID := uuid.NewString()
+
 	refreshToken, err := security.GenerateRefreshToken(
 		user.ID,
+		sessionID,
 		s.jwtCfg.RefreshSecret,
 		s.jwtCfg.RefreshTTL,
 	)
@@ -118,9 +123,9 @@ func (s *AuthService) Login(email string, password string) (*TokenPair, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	if err := s.tokenRepo.Store(
+	if err := s.sessionRepo.Create(
 		ctx,
-		refreshToken,
+		sessionID,
 		user.ID,
 		s.jwtCfg.RefreshTTL,
 	); err != nil {
@@ -144,31 +149,30 @@ func (s *AuthService) GetAllAdmins() ([]models.UserModel, error) {
 }
 
 func (s *AuthService) Refresh(refreshToken string) (*TokenPair, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
 
-	// Check Redis
-	userID, err := s.tokenRepo.Get(ctx, refreshToken)
+	claims, err := security.ParseRefreshToken(
+		refreshToken,
+		s.jwtCfg.RefreshSecret,
+	)
 	if err != nil {
 		return nil, ErrInvalidCredentials
 	}
 
-	// Invalidate old token (ROTATION)
-	_ = s.tokenRepo.Delete(ctx, refreshToken)
+	ctx := context.Background()
 
-	// Generate new tokens
-	accessToken, err := security.GenerateAccessToken(
-		userID,
-		"", "", // email & role optional here (can fetch if needed)
-		s.jwtCfg.AccessSecret,
-		s.jwtCfg.AccessTTL,
-	)
+	userID, err := s.sessionRepo.GetUserID(ctx, claims.SessionID)
 	if err != nil {
-		return nil, err
+		return nil, ErrInvalidCredentials
 	}
+
+	// rotate session
+	_ = s.sessionRepo.Delete(ctx, claims.SessionID, userID)
+
+	newSessionID := uuid.NewString()
 
 	newRefreshToken, err := security.GenerateRefreshToken(
 		userID,
+		newSessionID,
 		s.jwtCfg.RefreshSecret,
 		s.jwtCfg.RefreshTTL,
 	)
@@ -176,24 +180,47 @@ func (s *AuthService) Refresh(refreshToken string) (*TokenPair, error) {
 		return nil, err
 	}
 
-	// Store new refresh token
-	if err := s.tokenRepo.Store(
+	_ = s.sessionRepo.Create(
 		ctx,
-		newRefreshToken,
+		newSessionID,
 		userID,
 		s.jwtCfg.RefreshTTL,
-	); err != nil {
+	)
+
+	accessToken, err := security.GenerateAccessToken(
+		userID,
+		"", "",
+		s.jwtCfg.AccessSecret,
+		s.jwtCfg.AccessTTL,
+	)
+	if err != nil {
 		return nil, err
 	}
 
 	return &TokenPair{
 		AccessToken:  accessToken,
 		RefreshToken: newRefreshToken,
+		ExpiresIn:    int64(s.jwtCfg.AccessTTL.Seconds()),
+		RefreshTTL:   s.jwtCfg.RefreshTTL,
 	}, nil
 }
 
-func (s *AuthService) Logout(refeshToken string) error {
-	ctx := context.Background()
+func (s *AuthService) Logout(refreshToken string) error {
+	claims, err := security.ParseRefreshToken(
+		refreshToken,
+		s.jwtCfg.RefreshSecret,
+	)
+	if err != nil {
+		return ErrInvalidCredentials
+	}
 
-	return s.tokenRepo.Delete(ctx, refeshToken)
+	return s.sessionRepo.Delete(
+		context.Background(),
+		claims.SessionID,
+		claims.UserID,
+	)
+}
+
+func (s *AuthService) ListSessions(userID uint) ([]repositories.SessionInfo, error) {
+	return s.sessionRepo.ListByUsers(context.Background(), userID)
 }

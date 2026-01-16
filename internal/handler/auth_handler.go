@@ -177,3 +177,19 @@ func (h *AuthHandler) Logout(c *fiber.Ctx) error {
 	})
 
 }
+
+func (h *AuthHandler) ListSessions(c *fiber.Ctx) error {
+	userID := c.Locals("user_id").(uint)
+
+	sessions, err := h.authService.ListSessions(userID)
+
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{
+			"error": "failed to fetch session",
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"sessions": sessions,
+	})
+}

@@ -16,7 +16,8 @@ type AccessClaims struct {
 }
 
 type RefreshClaims struct {
-	UserID uint `json:"user_id"`
+	UserID    uint   `json:"user_id"`
+	SessionID string `json:"session_id"`
 	jwt.RegisteredClaims
 }
 
@@ -35,9 +36,10 @@ func GenerateAccessToken(userID uint, email, role, secret string, ttl time.Durat
 	return token.SignedString([]byte(secret))
 }
 
-func GenerateRefreshToken(userID uint, secret string, ttl time.Duration) (string, error) {
+func GenerateRefreshToken(userID uint, SessionID string, secret string, ttl time.Duration) (string, error) {
 	claims := RefreshClaims{
-		UserID: userID,
+		UserID:    userID,
+		SessionID: SessionID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(ttl)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -46,6 +48,27 @@ func GenerateRefreshToken(userID uint, secret string, ttl time.Duration) (string
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString([]byte(secret))
+}
+
+func ParseRefreshToken(tokenStr, secret string) (*RefreshClaims, error) {
+	token, err := jwt.ParseWithClaims(
+		tokenStr,
+		&RefreshClaims{},
+		func(t *jwt.Token) (interface{}, error) {
+			return []byte(secret), nil
+		},
+	)
+
+	if err != nil || !token.Valid {
+		return nil, err
+	}
+
+	claims, ok := token.Claims.(*RefreshClaims)
+	if !ok {
+		return nil, err
+	}
+
+	return claims, nil
 }
 
 func JWT(secret string) fiber.Handler {
