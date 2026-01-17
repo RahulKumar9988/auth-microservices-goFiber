@@ -59,7 +59,10 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 		})
 	}
 
-	tokens, err := h.authService.Login(req.Email, req.Password)
+	ip := c.IP()
+	ua := c.Get("User-Agent")
+
+	tokens, err := h.authService.Login(req.Email, req.Password, ip, ua)
 
 	if err != nil {
 		switch {
@@ -167,7 +170,10 @@ func (h *AuthHandler) Logout(c *fiber.Ctx) error {
 		})
 	}
 
-	_ = h.authService.Logout(refreshToken)
+	ip := c.IP()
+	ua := c.Get("User-Agent")
+
+	_ = h.authService.Logout(refreshToken, ip, ua)
 
 	c.ClearCookie("refresh_token")
 	c.ClearCookie("csrf_tokrn")

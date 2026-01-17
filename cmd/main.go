@@ -44,8 +44,9 @@ func main() {
 
 	sessionRepo := repositories.NewSessionRepository(redisClient)
 	rateLimiter := security.NewRateLimiter(redisClient)
+	AuditRepo := repositories.NewAuditRepo(dbConn)
 
-	router.Register(app, dbConn, cfg.JWT, sessionRepo, rateLimiter)
+	router.Register(app, dbConn, cfg.JWT, sessionRepo, rateLimiter, AuditRepo)
 	server.Start(app, cfg.AppPort)
 
 }

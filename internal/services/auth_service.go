@@ -21,6 +21,12 @@ var (
 	ErrUserExists         = errors.New("user already exists")
 )
 
+const (
+	maxLoginAttemts = 5
+	failWindow      = 10 * time.Minute
+	locakDuration   = 15 * time.Minute
+)
+
 type TokenPair struct {
 	AccessToken  string
 	RefreshToken string
@@ -32,14 +38,16 @@ type AuthService struct {
 	userRepo *repositories.UserRepository
 	jwtCfg   config.JWTConfig
 	//tokenRepo *repositories.RefreshTokenRepository
+	auditRepo   *repositories.AuditRepo
 	sessionRepo *repositories.SessionRepository
 }
 
-func NewAuthService(repo *repositories.UserRepository, jwtCfg config.JWTConfig, sessionRepo *repositories.SessionRepository) *AuthService {
+func NewAuthService(repo *repositories.UserRepository, jwtCfg config.JWTConfig, sessionRepo *repositories.SessionRepository, auditRepo *repositories.AuditRepo) *AuthService {
 	return &AuthService{
 		userRepo:    repo,
 		jwtCfg:      jwtCfg,
 		sessionRepo: sessionRepo,
+		auditRepo:   auditRepo,
 	}
 }
 
@@ -75,25 +83,49 @@ func (s *AuthService) Register(email string, password string) error {
 	return s.userRepo.Create(user)
 }
 
-func (s *AuthService) Login(email string, password string) (*TokenPair, error) {
+func (s *AuthService) Login(email, password, ip, ua string) (*TokenPair, error) {
 	email = strings.TrimSpace(strings.ToLower(email))
 
 	if email == "" || password == "" {
 		return nil, ErrInvalidInput
 	}
 
+	ctx := context.Background()
+
+	if s.IsLocking(ctx, email) {
+		s.auditRepo.Log("ACCOUNT_LOCKED", nil, ip, ua)
+		return nil, errors.New("account temporarily locked")
+	}
+
 	user, err := s.userRepo.FindByEmail(email)
 	if err != nil {
+		s.auditRepo.Log("LOGIN_FAILED", nil, ip, ua)
 		return nil, err
 	}
 
 	if user == nil {
+		s.auditRepo.Log("LOGIN_FAILED", nil, ip, ua)
 		return nil, ErrInvalidCredentials
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
+		_ = s.RecordFailedLogin(ctx, email)
+		s.auditRepo.Log(
+			"LOGIN_FAILED",
+			nil,
+			ip,
+			ua,
+		)
 		return nil, ErrInvalidCredentials
 	}
+
+	s.ClearFailLogin(ctx, email)
+	s.auditRepo.Log(
+		"LOGIN_SUCCESS",
+		&user.ID,
+		ip,
+		ua,
+	)
 
 	accessToken, err := security.GenerateAccessToken(
 		user.ID,
@@ -205,7 +237,7 @@ func (s *AuthService) Refresh(refreshToken string) (*TokenPair, error) {
 	}, nil
 }
 
-func (s *AuthService) Logout(refreshToken string) error {
+func (s *AuthService) Logout(refreshToken, ip, ua string) error {
 	claims, err := security.ParseRefreshToken(
 		refreshToken,
 		s.jwtCfg.RefreshSecret,
@@ -213,7 +245,12 @@ func (s *AuthService) Logout(refreshToken string) error {
 	if err != nil {
 		return ErrInvalidCredentials
 	}
-
+	s.auditRepo.Log(
+		"LOGOUT",
+		&claims.UserID,
+		ip,
+		ua,
+	)
 	return s.sessionRepo.Delete(
 		context.Background(),
 		claims.SessionID,
@@ -224,3 +261,39 @@ func (s *AuthService) Logout(refreshToken string) error {
 func (s *AuthService) ListSessions(userID uint) ([]repositories.SessionInfo, error) {
 	return s.sessionRepo.ListByUsers(context.Background(), userID)
 }
+
+func (s *AuthService) IsLocking(ctx context.Context, email string) bool {
+	key := "login_lock:" + email
+	exists, _ := s.sessionRepo.Redis().Exists(ctx, key).Result()
+	return exists == 1
+}
+
+func (s *AuthService) RecordFailedLogin(ctx context.Context, email string) error {
+	failKey := "login_fail:" + email
+	lockKey := "login_lock:" + email
+
+	count, err := s.sessionRepo.Redis().Incr(ctx, failKey).Result()
+	if err != nil {
+		return err
+	}
+
+	if count == 1 {
+		s.sessionRepo.Redis().Expire(ctx, failKey, failWindow)
+	}
+	if count >= maxLoginAttemts {
+		s.sessionRepo.Redis().Set(ctx, lockKey, "1", locakDuration)
+	}
+
+	return nil
+}
+
+func (s *AuthService) ClearFailLogin(ctx context.Context, email string) {
+	s.sessionRepo.Redis().Del(ctx,
+		"login_fail:"+email,
+		"login_lock:"+email,
+	)
+}
+
+// func (s *AuthService) Create() error {
+
+// }

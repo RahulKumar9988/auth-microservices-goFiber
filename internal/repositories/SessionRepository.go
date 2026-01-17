@@ -76,3 +76,7 @@ func (r *SessionRepository) Delete(
 	_, err := pipe.Exec(ctx)
 	return err
 }
+
+func (r *SessionRepository) Redis() *redis.Client {
+	return r.rdb
+}

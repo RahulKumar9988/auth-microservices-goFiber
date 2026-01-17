@@ -1,0 +1,8 @@
+CREATE TABLE IF NOT EXISTS audit_logs (
+	id SERIAL PRIMARY KEY,
+	user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+	event VARCHAR(50) NOT NULL,
+	ip VARCHAR(45),
+	user_agent TEXT,
+	created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
