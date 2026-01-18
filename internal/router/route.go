@@ -31,9 +31,15 @@ func Register(app *fiber.App, db *gorm.DB, jwtCfg config.JWTConfig, sessionRepo 
 
 	auth := app.Group("/auth")
 
-	auth.Post("/register", rateLimiter.Limit("register", 5, time.Minute), authHandler.Register)
-	auth.Post("/login", rateLimiter.Limit("register", 5, time.Minute), authHandler.Login)
-	auth.Post("/refresh", rateLimiter.Limit("register", 5, time.Minute), authHandler.Refresh)
+	auth.Post("/register", rateLimiter.Limit("register", 5, time.Minute, func(ip, ua string) {
+		auditRepo.Log("REGISTER_RATE_LIMIT", nil, ip, ua)
+	}), authHandler.Register)
+	auth.Post("/login", rateLimiter.Limit("login", 5, time.Minute, func(ip, ua string) {
+		auditRepo.Log("RATE_LIMIT_HIT", nil, ip, ua)
+	}), authHandler.Login)
+	auth.Post("/refresh", rateLimiter.Limit("refresh", 5, time.Minute, func(ip, ua string) {
+		auditRepo.Log("REGISTER_RATE_LIMIT", nil, ip, ua)
+	}), authHandler.Refresh)
 	auth.Post("/logout", authHandler.Logout)
 
 	protected := auth.Group("/", security.JWT(jwtCfg.AccessSecret))

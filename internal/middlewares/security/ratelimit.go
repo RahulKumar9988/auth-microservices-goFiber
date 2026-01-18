@@ -17,10 +17,11 @@ func NewRateLimiter(rdb *redis.Client) *Ratelimiter {
 	return &Ratelimiter{rdb: rdb}
 }
 
-func (r *Ratelimiter) Limit(key string, max int, window time.Duration) fiber.Handler {
+func (r *Ratelimiter) Limit(key string, max int, window time.Duration, audit func(ip, ua string)) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		ctx := context.Background()
 		ip := c.IP()
+		ua := c.Get("User-Agent")
 
 		rediskey := fmt.Sprintf("rate:%s:%s", key, ip)
 
@@ -36,6 +37,10 @@ func (r *Ratelimiter) Limit(key string, max int, window time.Duration) fiber.Han
 		}
 
 		if count > int64(max) {
+			if audit != nil {
+				audit(ip, ua)
+
+			}
 			return c.Status(429).JSON(fiber.Map{
 				"error":       "too many request",
 				"retry_after": window.Seconds(),
