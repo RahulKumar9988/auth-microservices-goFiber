@@ -180,7 +180,7 @@ func (s *AuthService) GetAllAdmins() ([]models.UserModel, error) {
 	return s.userRepo.GetAllAdmins()
 }
 
-func (s *AuthService) Refresh(refreshToken string) (*TokenPair, error) {
+func (s *AuthService) Refresh(refreshToken string, ip, ua string) (*TokenPair, error) {
 
 	claims, err := security.ParseRefreshToken(
 		refreshToken,
@@ -189,11 +189,11 @@ func (s *AuthService) Refresh(refreshToken string) (*TokenPair, error) {
 	if err != nil {
 		return nil, ErrInvalidCredentials
 	}
-
 	ctx := context.Background()
 
 	userID, err := s.sessionRepo.GetUserID(ctx, claims.SessionID)
 	if err != nil {
+		s.auditRepo.Log("REFRESH_TOKEN_REUSE_DETECTED", &claims.UserID, ip, ua)
 		return nil, ErrInvalidCredentials
 	}
 

@@ -38,7 +38,7 @@ func Register(app *fiber.App, db *gorm.DB, jwtCfg config.JWTConfig, sessionRepo 
 		auditRepo.Log("RATE_LIMIT_HIT", nil, ip, ua)
 	}), authHandler.Login)
 	auth.Post("/refresh", rateLimiter.Limit("refresh", 5, time.Minute, func(ip, ua string) {
-		auditRepo.Log("REGISTER_RATE_LIMIT", nil, ip, ua)
+		auditRepo.Log("REFRESH_RATE_LIMIT", nil, ip, ua)
 	}), authHandler.Refresh)
 	auth.Post("/logout", authHandler.Logout)
 

@@ -107,12 +107,14 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 
 func (h *AuthHandler) Refresh(c *fiber.Ctx) error {
 	refreshToken := c.Cookies("refresh_token")
+	ip := c.IP()
+	ua := c.Get("User-Agent")
 
 	if refreshToken == "" {
 		return c.Status(401).JSON(fiber.Map{"error": "refresh token missing"})
 	}
 
-	tokens, err := h.authService.Refresh(refreshToken)
+	tokens, err := h.authService.Refresh(refreshToken, ip, ua)
 	if err != nil {
 		return c.Status(401).JSON(fiber.Map{"error": "invalid refresh token"})
 	}
