@@ -19,6 +19,7 @@ func NewAuthHandler(asv *services.AuthService) *AuthHandler {
 type userRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
+	Role     string `json:"role"`
 }
 
 func (h *AuthHandler) Register(c *fiber.Ctx) error {
@@ -36,7 +37,7 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 		})
 	}
 
-	err := h.authService.Register(req.Email, req.Password)
+	err := h.authService.Register(req.Email, req.Password, req.Role)
 
 	if err != nil {
 		return c.Status(405).JSON(fiber.Map{

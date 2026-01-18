@@ -51,7 +51,7 @@ func NewAuthService(repo *repositories.UserRepository, jwtCfg config.JWTConfig, 
 	}
 }
 
-func (s *AuthService) Register(email string, password string) error {
+func (s *AuthService) Register(email string, password string, role string) error {
 	email = strings.TrimSpace(strings.ToLower(email))
 
 	if email == "" || password == "" {
@@ -77,7 +77,7 @@ func (s *AuthService) Register(email string, password string) error {
 	user := &models.UserModel{
 		Email:    email,
 		Password: string(hash),
-		Role:     models.User,
+		Role:     models.UserRole(role),
 	}
 
 	return s.userRepo.Create(user)
