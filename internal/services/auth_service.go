@@ -159,6 +159,8 @@ func (s *AuthService) Login(email, password, ip, ua string) (*TokenPair, error) 
 		ctx,
 		sessionID,
 		user.ID,
+		ip,
+		ua,
 		s.jwtCfg.RefreshTTL,
 	); err != nil {
 		return nil, err
@@ -216,6 +218,8 @@ func (s *AuthService) Refresh(refreshToken string, ip, ua string) (*TokenPair, e
 		ctx,
 		newSessionID,
 		userID,
+		ip,
+		ua,
 		s.jwtCfg.RefreshTTL,
 	)
 
@@ -293,7 +297,3 @@ func (s *AuthService) ClearFailLogin(ctx context.Context, email string) {
 		"login_lock:"+email,
 	)
 }
-
-// func (s *AuthService) Create() error {
-
-// }
