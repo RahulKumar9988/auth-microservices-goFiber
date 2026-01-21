@@ -137,6 +137,22 @@ func (r *SessionRepository) Delete(
 	return err
 }
 
+func (r *SessionRepository) DeleteByUser(
+	ctx context.Context,
+	sessionID string,
+	userID uint,
+) error {
+	sessionKey := fmt.Sprintf("session:%s", sessionID)
+	userSessionKey := fmt.Sprintf("user_session:%d", userID)
+
+	pipe := r.rdb.TxPipeline()
+	pipe.Del(ctx, sessionKey)
+	pipe.SRem(ctx, userSessionKey, sessionID)
+
+	_, err := pipe.Exec(ctx)
+	return err
+}
+
 /* ============================
    List user sessions
 ============================ */

@@ -202,3 +202,27 @@ func (h *AuthHandler) ListSessions(c *fiber.Ctx) error {
 		"sessions": sessions,
 	})
 }
+
+func (h *AuthHandler) LogoutSession(c *fiber.Ctx) error {
+	userID := c.Locals("user_id").(uint)
+	sessionID := c.Params("sessionID")
+	ip := c.IP()
+	ua := c.Get("User-Agent")
+
+	if sessionID == "" {
+		return c.Status(400).JSON(fiber.Map{
+			"error": "sessionID missing",
+		})
+	}
+
+	err := h.authService.LogoutSession(userID, sessionID, ip, ua)
+	if err != nil {
+		return c.Status(403).JSON(fiber.Map{
+			"error": "cannot revoke session",
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"message": "session logout successfully",
+	})
+}

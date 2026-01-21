@@ -297,3 +297,26 @@ func (s *AuthService) ClearFailLogin(ctx context.Context, email string) {
 		"login_lock:"+email,
 	)
 }
+
+func (s *AuthService) LogoutSession(userID uint, sessionID string, ip, ua string) error {
+	ctx := context.Background()
+
+	storedUserID, err := s.sessionRepo.GetUserID(ctx, sessionID)
+	if err != nil || storedUserID != userID {
+		return ErrInvalidCredentials
+	}
+
+	err = s.sessionRepo.DeleteByUser(ctx, sessionID, userID)
+	if err != nil {
+		return err
+	}
+
+	s.auditRepo.Log(
+		"SESSION_REVOKED",
+		&userID,
+		ip,
+		ua,
+	)
+
+	return nil
+}

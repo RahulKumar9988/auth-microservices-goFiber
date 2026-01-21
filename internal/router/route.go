@@ -45,6 +45,7 @@ func Register(app *fiber.App, db *gorm.DB, jwtCfg config.JWTConfig, sessionRepo 
 	protected := auth.Group("/", security.JWT(jwtCfg.AccessSecret))
 	protected.Get("/userlist", authHandler.UserList)
 	protected.Get("/sessions", authHandler.ListSessions)
+	protected.Delete("/sessions/:sessionID", authHandler.LogoutSession)
 
 	admin := protected.Group("/admin", security.RequiredRole("admin"))
 	admin.Get("/adminlist", authHandler.AdminUserList)
