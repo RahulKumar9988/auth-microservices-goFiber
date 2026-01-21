@@ -153,6 +153,30 @@ func (r *SessionRepository) DeleteByUser(
 	return err
 }
 
+func (r *SessionRepository) DeleteAll(
+	ctx context.Context,
+	userID uint,
+	expectedSessionID string,
+) error {
+	userSessionKey := fmt.Sprintf("user_session:%d", userID)
+	sessionIDs, err := r.rdb.SMembers(ctx, userSessionKey).Result()
+
+	if err != nil {
+		return err
+	}
+
+	pipe := r.rdb.TxPipeline()
+	for _, sid := range sessionIDs {
+		if expectedSessionID != "" && sid == expectedSessionID {
+			continue
+		}
+		pipe.Del(ctx, fmt.Sprintf("session:%s", sid))
+		pipe.SRem(ctx, userSessionKey, sid)
+	}
+	_, err = pipe.Exec(ctx)
+	return err
+}
+
 /* ============================
    List user sessions
 ============================ */
