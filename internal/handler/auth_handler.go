@@ -3,6 +3,7 @@ package handler
 import (
 	"errors"
 	"net/mail"
+	"os"
 
 	"github.com/RahulKumar9988/auth-microservices-goFiber/internal/services"
 	"github.com/gofiber/fiber/v2"
@@ -14,6 +15,10 @@ type AuthHandler struct {
 
 func NewAuthHandler(asv *services.AuthService) *AuthHandler {
 	return &AuthHandler{authService: asv}
+}
+
+func isProd() bool {
+	return os.Getenv("ENV") == "production"
 }
 
 type userRequest struct {
@@ -178,8 +183,27 @@ func (h *AuthHandler) Logout(c *fiber.Ctx) error {
 
 	_ = h.authService.Logout(refreshToken, ip, ua)
 
-	c.ClearCookie("refresh_token")
-	c.ClearCookie("csrf_tokrn")
+	// Refresh token
+	c.Cookie(&fiber.Cookie{
+		Name:     "refresh_token",
+		Value:    "",
+		Path:     "/auth",
+		MaxAge:   -1,
+		HTTPOnly: true,
+		Secure:   isProd(),
+		SameSite: fiber.CookieSameSiteLaxMode,
+	})
+
+	// CSRF token
+	c.Cookie(&fiber.Cookie{
+		Name:     "csrf_token",
+		Value:    "",
+		Path:     "/",
+		MaxAge:   -1,
+		Secure:   isProd(),
+		HTTPOnly: true,
+		SameSite: fiber.CookieSameSiteStrictMode,
+	})
 
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "user Loged out successfully",
@@ -224,5 +248,49 @@ func (h *AuthHandler) LogoutSession(c *fiber.Ctx) error {
 
 	return c.JSON(fiber.Map{
 		"message": "session logout successfully",
+	})
+}
+
+func (h *AuthHandler) LogoutAllSession(c *fiber.Ctx) error {
+	userID := c.Locals("user_id").(uint)
+	ip := c.IP()
+	ua := c.Get("User-Agent")
+
+	refreshToken := c.Cookies("refresh_token")
+
+	if err := h.authService.LogoutAllSessions(
+		userID,
+		refreshToken,
+		ip,
+		ua,
+	); err != nil {
+		return c.Status(500).JSON(fiber.Map{
+			"error": "failed to logout sessions",
+		})
+	}
+
+	// Refresh token
+	c.Cookie(&fiber.Cookie{
+		Name:     "refresh_token",
+		Value:    "",
+		Path:     "/auth",
+		MaxAge:   -1,
+		HTTPOnly: true,
+		Secure:   isProd(),
+		SameSite: fiber.CookieSameSiteLaxMode,
+	})
+
+	// CSRF token
+	c.Cookie(&fiber.Cookie{
+		Name:     "csrf_token",
+		Value:    "",
+		Path:     "/",
+		MaxAge:   -1,
+		Secure:   isProd(),
+		SameSite: fiber.CookieSameSiteStrictMode,
+	})
+
+	return c.Status(200).JSON(fiber.Map{
+		"message": "logout all sessions",
 	})
 }

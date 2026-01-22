@@ -320,3 +320,36 @@ func (s *AuthService) LogoutSession(userID uint, sessionID string, ip, ua string
 
 	return nil
 }
+
+func (s *AuthService) LogoutAllSessions(userID uint, refreshToken, ip, ua string) error {
+	currentSessionID := ""
+
+	if refreshToken != "" {
+		claims, err := security.ParseRefreshToken(
+			refreshToken,
+			s.jwtCfg.RefreshSecret,
+		)
+		if err == nil && claims.UserID == userID {
+			currentSessionID = claims.SessionID
+		}
+	}
+
+	err := s.sessionRepo.DeleteAll(
+		context.Background(),
+		userID,
+		currentSessionID,
+	)
+
+	if err != nil {
+		return err
+	}
+
+	s.auditRepo.Log(
+		"LOGOUT_ALL",
+		&userID,
+		ip,
+		ua,
+	)
+
+	return nil
+}

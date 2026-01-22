@@ -158,8 +158,8 @@ func (r *SessionRepository) DeleteAll(
 	userID uint,
 	expectedSessionID string,
 ) error {
-	userSessionKey := fmt.Sprintf("user_session:%d", userID)
-	sessionIDs, err := r.rdb.SMembers(ctx, userSessionKey).Result()
+	userKey := fmt.Sprintf("user_session:%d", userID)
+	sessionIDs, err := r.rdb.SMembers(ctx, userKey).Result()
 
 	if err != nil {
 		return err
@@ -170,9 +170,16 @@ func (r *SessionRepository) DeleteAll(
 		if expectedSessionID != "" && sid == expectedSessionID {
 			continue
 		}
-		pipe.Del(ctx, fmt.Sprintf("session:%s", sid))
-		pipe.SRem(ctx, userSessionKey, sid)
+		pipe.Del(ctx ,"session:"+sid)
 	}
+
+	if expectedSessionID == "" {
+		pipe.Del(ctx, userKey)
+	} else {
+		pipe.Del(ctx, userKey)
+		pipe.SAdd(ctx, userKey, expectedSessionID)
+	}
+
 	_, err = pipe.Exec(ctx)
 	return err
 }
