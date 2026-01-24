@@ -2,7 +2,10 @@ package services
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/base64"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -38,8 +41,9 @@ type AuthService struct {
 	userRepo *repositories.UserRepository
 	jwtCfg   config.JWTConfig
 	//tokenRepo *repositories.RefreshTokenRepository
-	auditRepo   *repositories.AuditRepo
-	sessionRepo *repositories.SessionRepository
+	auditRepo         *repositories.AuditRepo
+	sessionRepo       *repositories.SessionRepository
+	passwordResetRepo *repositories.PasswordResetRepository
 }
 
 func NewAuthService(repo *repositories.UserRepository, jwtCfg config.JWTConfig, sessionRepo *repositories.SessionRepository, auditRepo *repositories.AuditRepo) *AuthService {
@@ -352,4 +356,40 @@ func (s *AuthService) LogoutAllSessions(userID uint, refreshToken, ip, ua string
 	)
 
 	return nil
+}
+
+func (s *AuthService) RequestPasswordReset(email, ip, ua string) error {
+
+	user, err := s.userRepo.FindByEmail(strings.ToLower(email))
+	if err != nil || user == nil {
+		s.auditRepo.Log("PWD_RESET_REQUEST", nil, ip, ua)
+		return nil
+	}
+
+	tokenByte := make([]byte, 32)
+	_, _ = rand.Read(tokenByte)
+	rowToken := base64.RawURLEncoding.EncodeToString(tokenByte)
+
+	ctx := context.Background()
+	_ = s.passwordResetRepo.Store(
+		ctx,
+		rowToken,
+		user.ID,
+		15*time.Minute,
+	)
+
+	// TODO: send email (for now just log)
+	fmt.Println("RESET_TOKEN:", rowToken)
+	s.auditRepo.Log(
+		"PWD_RESET_REQUEST",
+		&user.ID,
+		ip,
+		ua,
+	)
+
+	return nil
+}
+
+func (s *AuthService) ResetPassword(token, newPassword, ip, ua string) error {
+	ctx := context.Background()
 }

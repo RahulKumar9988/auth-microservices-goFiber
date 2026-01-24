@@ -294,3 +294,7 @@ func (h *AuthHandler) LogoutAllSession(c *fiber.Ctx) error {
 		"message": "logout all sessions",
 	})
 }
+
+func (h *AuthHandler) PasswordReset(c *fiber.Ctx) error {
+
+}
