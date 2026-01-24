@@ -296,5 +296,22 @@ func (h *AuthHandler) LogoutAllSession(c *fiber.Ctx) error {
 }
 
 func (h *AuthHandler) PasswordReset(c *fiber.Ctx) error {
+	var req struct {
+		Email string `json:"email"`
+	}
 
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "missing params",
+		})
+	}
+
+	ip := c.IP()
+	ua := c.Get("User-Agent")
+
+	_ = h.authService.RequestPasswordReset(req.Email, ip, ua)
+
+	return c.JSON(fiber.Map{
+		"message": "if user exist, reset link has been send",
+	})
 }

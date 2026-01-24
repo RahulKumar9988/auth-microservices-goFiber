@@ -392,4 +392,35 @@ func (s *AuthService) RequestPasswordReset(email, ip, ua string) error {
 
 func (s *AuthService) ResetPassword(token, newPassword, ip, ua string) error {
 	ctx := context.Background()
+	userID, err := s.passwordResetRepo.Get(ctx, token)
+
+	if err != nil {
+		s.auditRepo.Log("PWD_RESET_INVALID", nil, ip, ua)
+		return ErrInvalidCredentials
+	}
+
+	hash, err := bcrypt.GenerateFromPassword(
+		[]byte(newPassword),
+		bcrypt.DefaultCost,
+	)
+
+	if err != nil {
+		return err
+	}
+
+	if err := s.userRepo.UpdatePassword(userID, string(hash)); err != nil {
+		return err
+	}
+
+	_ = s.passwordResetRepo.Delete(ctx, token)
+	_ = s.sessionRepo.DeleteAll(ctx, uint(userID), "")
+
+	s.auditRepo.Log(
+		"PWD_REST_PASSWORD",
+		&userID,
+		ip,
+		ua,
+	)
+
+	return nil
 }

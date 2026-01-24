@@ -28,14 +28,17 @@ func (r *PasswordResetRepository) Store(ctx context.Context, rowToken string, us
 	return r.rdb.Set(ctx, key, userID, ttl).Err()
 }
 
-func (r *PasswordResetRepository) Get(ctx context.Context, rowToken string) (uint64, error) {
+func (r *PasswordResetRepository) Get(ctx context.Context, rowToken string) (uint, error) {
 	key := fmt.Sprintf("pwd_reset:%s", hashToken(rowToken))
-	return r.rdb.Get(ctx, key).Uint64()
+	uid64, err := r.rdb.Get(ctx, key).Uint64()
+	if err != nil {
+		return 0, err
+	}
+
+	return uint(uid64), nil
 }
 
 func (r *PasswordResetRepository) Delete(ctx context.Context, rowToken string) error {
 	key := fmt.Sprintf("pwd_reset:%s", hashToken(rowToken))
 	return r.rdb.Del(ctx, key).Err()
 }
-
-

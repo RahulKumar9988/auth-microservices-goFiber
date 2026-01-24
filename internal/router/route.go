@@ -41,13 +41,13 @@ func Register(app *fiber.App, db *gorm.DB, jwtCfg config.JWTConfig, sessionRepo 
 		auditRepo.Log("REFRESH_RATE_LIMIT", nil, ip, ua)
 	}), authHandler.Refresh)
 	auth.Post("/logout", authHandler.Logout)
+	auth.Post("/reset-password", authHandler.PasswordReset)
 
 	protected := auth.Group("/", security.JWT(jwtCfg.AccessSecret))
 	protected.Get("/userlist", authHandler.UserList)
 	protected.Get("/sessions", authHandler.ListSessions)
 	protected.Delete("/sessions/:sessionID", authHandler.LogoutSession)
 	protected.Post("/logout-all", authHandler.LogoutAllSession)
-	protected.Patch("/reset-password", authHandler.PasswordReset)
 
 	admin := protected.Group("/admin", security.RequiredRole("admin"))
 	admin.Get("/adminlist", authHandler.AdminUserList)

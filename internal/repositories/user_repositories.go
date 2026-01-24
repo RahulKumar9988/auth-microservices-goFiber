@@ -53,3 +53,7 @@ func (r *UserRepository) GetAllAdmins() ([]models.UserModel, error) {
 	}
 	return admins, nil
 }
+
+func (r *UserRepository) UpdatePassword(userID uint, hashPassword string) error {
+	return r.db.Model(&models.UserModel{}).Where("id = ?", userID).Update("password", hashPassword).Error
+}
