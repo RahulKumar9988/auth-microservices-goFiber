@@ -12,7 +12,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func Register(app *fiber.App, db *gorm.DB, jwtCfg config.JWTConfig, sessionRepo *repositories.SessionRepository, rateLimiter *security.Ratelimiter, auditRepo *repositories.AuditRepo) {
+func Register(app *fiber.App, db *gorm.DB, jwtCfg config.JWTConfig, sessionRepo *repositories.SessionRepository, rateLimiter *security.Ratelimiter, auditRepo *repositories.AuditRepo, passwordResetRepo *repositories.PasswordResetRepository) {
 	app.Get("/health", func(c *fiber.Ctx) error {
 		sqlDB, _ := db.DB()
 		if err := sqlDB.Ping(); err != nil {
@@ -26,7 +26,7 @@ func Register(app *fiber.App, db *gorm.DB, jwtCfg config.JWTConfig, sessionRepo 
 	})
 
 	userRepo := repositories.NewUserRepository(db)
-	userService := services.NewAuthService(userRepo, jwtCfg, sessionRepo, auditRepo)
+	userService := services.NewAuthService(userRepo, jwtCfg, sessionRepo, auditRepo, passwordResetRepo)
 	authHandler := handler.NewAuthHandler(userService)
 
 	auth := app.Group("/auth")
@@ -40,14 +40,16 @@ func Register(app *fiber.App, db *gorm.DB, jwtCfg config.JWTConfig, sessionRepo 
 	auth.Post("/refresh", rateLimiter.Limit("refresh", 5, time.Minute, func(ip, ua string) {
 		auditRepo.Log("REFRESH_RATE_LIMIT", nil, ip, ua)
 	}), authHandler.Refresh)
-	auth.Post("/logout", authHandler.Logout)
+	// auth.Post("/logout", authHandler.Logout)
 	auth.Post("/reset-password", authHandler.PasswordReset)
+	auth.Patch("/reset-password/confirm", authHandler.PasswordResetConfirm)
 
-	protected := auth.Group("/", security.JWT(jwtCfg.AccessSecret))
+	protected := auth.Group("/", security.JWT(jwtCfg.AccessSecret), security.CSRF())
 	protected.Get("/userlist", authHandler.UserList)
 	protected.Get("/sessions", authHandler.ListSessions)
 	protected.Delete("/sessions/:sessionID", authHandler.LogoutSession)
 	protected.Post("/logout-all", authHandler.LogoutAllSession)
+	protected.Post("/logout", authHandler.Logout)
 
 	admin := protected.Group("/admin", security.RequiredRole("admin"))
 	admin.Get("/adminlist", authHandler.AdminUserList)

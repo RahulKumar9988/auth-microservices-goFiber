@@ -46,12 +46,13 @@ type AuthService struct {
 	passwordResetRepo *repositories.PasswordResetRepository
 }
 
-func NewAuthService(repo *repositories.UserRepository, jwtCfg config.JWTConfig, sessionRepo *repositories.SessionRepository, auditRepo *repositories.AuditRepo) *AuthService {
+func NewAuthService(repo *repositories.UserRepository, jwtCfg config.JWTConfig, sessionRepo *repositories.SessionRepository, auditRepo *repositories.AuditRepo, passwordResetRepo *repositories.PasswordResetRepository) *AuthService {
 	return &AuthService{
-		userRepo:    repo,
-		jwtCfg:      jwtCfg,
-		sessionRepo: sessionRepo,
-		auditRepo:   auditRepo,
+		userRepo:          repo,
+		jwtCfg:            jwtCfg,
+		sessionRepo:       sessionRepo,
+		auditRepo:         auditRepo,
+		passwordResetRepo: passwordResetRepo,
 	}
 }
 

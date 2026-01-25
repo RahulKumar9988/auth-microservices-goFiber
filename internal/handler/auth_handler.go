@@ -301,7 +301,7 @@ func (h *AuthHandler) PasswordReset(c *fiber.Ctx) error {
 	}
 
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+		return c.Status(400).JSON(fiber.Map{
 			"error": "missing params",
 		})
 	}
@@ -313,5 +313,42 @@ func (h *AuthHandler) PasswordReset(c *fiber.Ctx) error {
 
 	return c.JSON(fiber.Map{
 		"message": "if user exist, reset link has been send",
+	})
+}
+
+func (h *AuthHandler) PasswordResetConfirm(c *fiber.Ctx) error {
+	var req struct {
+		Token       string `json:"token"`
+		NewPassword string `json:"new_password"`
+	}
+
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{
+			"error": "invalid request",
+		})
+	}
+
+	if req.Token == "" || req.NewPassword == "" {
+		return c.Status(400).JSON(fiber.Map{
+			"error": "token and password required",
+		})
+	}
+
+	ip := c.IP()
+	ua := c.Get("User-Agent")
+
+	if err := h.authService.ResetPassword(
+		req.Token,
+		req.NewPassword,
+		ip,
+		ua,
+	); err != nil {
+		return c.Status(401).JSON(fiber.Map{
+			"error": "invalid or expired token",
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"message": "password reset successful",
 	})
 }
