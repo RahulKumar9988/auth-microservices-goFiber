@@ -1,7 +1,5 @@
 # Auth Microservice (Go + Fiber)
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-
 A rigorous, production-ready authentication microservice built with **Go** and **Fiber**. This service provides secure user authentication, session management, and authorization features suitable for modern distributed systems.
 
 ## 🚀 Features
