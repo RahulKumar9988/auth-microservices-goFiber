@@ -1,5 +1,7 @@
 # Auth Microservice (Go + Fiber)
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 A rigorous, production-ready authentication microservice built with **Go** and **Fiber**. This service provides secure user authentication, session management, and authorization features suitable for modern distributed systems.
 
 ## 🚀 Features
@@ -133,10 +135,14 @@ go run cmd/main.go
 
 **Current Status**: 🟡 **Near Production Ready**
 
-- ✅ **Architecture**: Solid clean architecture involves separation of concerns (Handlers, Services, Repositories).
-- ✅ **Security**: Implements standard security practices (JWT, CSRF, Hashing).
-- ✅ **Infrastructure**: Dockerized and ready for deployment.
-- ❌ **Testing**: **Major Gap**. No unit or integration tests found. `*_test.go` files are missing.
-- ❌ **CI/CD**: No automated build/test pipelines configured.
+- **Architecture**: Solid clean architecture involves separation of concerns (Handlers, Services, Repositories).
+- **Security**: Implements standard security practices (JWT, CSRF, Hashing).
+- **Infrastructure**: Dockerized and ready for deployment.
+- **Testing**: **Major Gap**. No unit or integration tests found. `*_test.go` files are missing.
+- **CI/CD**: No automated build/test pipelines configured.
 
 **Recommendation**: Before deploying to a production environment, complete the **Testing** suite to ensure reliability and regression safety.
+
+## 📄 License
+
+This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
